@@ -1,5 +1,6 @@
 package expression;
 
+import org.jetbrains.annotations.*;
 import java.util.*;
 
 public class Lexer
@@ -33,6 +34,7 @@ public class Lexer
         return tokenLength;
     }
 
+    @Contract(pure = true)
     private String getTokenString()
     {
         String tokenType = "";
