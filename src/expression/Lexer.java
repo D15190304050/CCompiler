@@ -1,11 +1,12 @@
 package expression;
 
 import org.jetbrains.annotations.*;
+
 import java.util.*;
 
 public class Lexer
 {
-    public static final int EOF = 0;
+    public static final int EOI = 0;
     public static final int SEMICOLON = 1;
     public static final int PLUS = 2;
     public static final int TIMES = 3;
@@ -16,22 +17,22 @@ public class Lexer
     public static final String END = "end";
 
     private int lookAhead;
-    private String tokenText;
-    public int tokenLength;
-    public int lineNumber;
+    private String symbolText;
+    public int symbolLength;
+    private int lineNumber;
     private String inputBuffer;
     private String remainingContents;
 
     private Scanner input;
 
-    public String getTokenText()
+    public String getSymbolText()
     {
-        return tokenText;
+        return symbolText;
     }
 
-    public int getTokenLength()
+    public int getSymbolLength()
     {
-        return tokenLength;
+        return symbolLength;
     }
 
     @Contract(pure = true)
@@ -40,8 +41,8 @@ public class Lexer
         String tokenType = "";
         switch (lookAhead)
         {
-            case EOF:
-                tokenType = "EOF";
+            case EOI:
+                tokenType = "EOI";
                 break;
             case PLUS:
                 tokenType = "PLUS";
@@ -69,14 +70,19 @@ public class Lexer
     public Lexer()
     {
         lookAhead = -1;
-        tokenText = "";
-        tokenLength = 0;
+        symbolText = "";
+        symbolLength = 0;
         lineNumber = 0;
         inputBuffer = "";
 
         remainingContents = "";
 
         input = new Scanner(System.in);
+    }
+
+    public int getLineNumber()
+    {
+        return lineNumber;
     }
 
     private boolean isAlphaOrNumber(char c)
@@ -93,7 +99,8 @@ public class Lexer
                 for (; ; )
                 {
                     String line = input.nextLine();
-                    if (line.equals(END)) break;
+                    if (line.equals(END))
+                        break;
 
                     inputBuffer += line;
                 }
@@ -101,21 +108,23 @@ public class Lexer
                 if (inputBuffer.isEmpty())
                 {
                     remainingContents = "";
-                    return EOF;
+                    return EOI;
                 }
 
                 lineNumber++;
                 remainingContents = inputBuffer;
                 remainingContents.trim();
+                inputBuffer = "";
             } // while (remainingContents.isEmpty())
 
             // This branch is unnecessary.
-            if (remainingContents.isEmpty()) return EOF;
+            if (remainingContents.isEmpty())
+                return EOI;
 
             for (int i = 0; i < remainingContents.length(); i++)
             {
-                tokenLength = 0;
-                tokenText = remainingContents.substring(0, 1);
+                symbolLength = 0;
+                symbolText = remainingContents.substring(0, 1);
                 char nextChar = remainingContents.charAt(i);
 
                 switch (nextChar)
@@ -139,6 +148,7 @@ public class Lexer
                     case '\n':
                     case '\t':
                     case ' ':
+                        i--;
                         remainingContents = remainingContents.substring(1);
                         break;
 
@@ -150,11 +160,11 @@ public class Lexer
                             while ((i < remainingContents.length()) && isAlphaOrNumber(remainingContents.charAt(i)))
                             {
                                 i++;
-                                tokenLength++;
+                                symbolLength++;
                             }
 
-                            tokenText = remainingContents.substring(0, tokenLength);
-                            remainingContents = remainingContents.substring(tokenLength);
+                            symbolText = remainingContents.substring(0, symbolLength);
+                            remainingContents = remainingContents.substring(symbolLength);
                             return NUMBER_OR_IDENTIFIER;
                         }
                 }
@@ -170,18 +180,19 @@ public class Lexer
         return token == lookAhead;
     }
 
-    private void getNextToken()
+    public void getNextToken()
     {
         lookAhead = getToken();
     }
 
     private void runLexer()
     {
-        while (!match(EOF))
+        while (!match(EOI))
         {
-            System.out.println("Token: " + getTokenString() + ", Symbol: " + tokenText);
+            System.out.println("Token: " + getTokenString() + ", Symbol: " + getSymbolText());
             getNextToken();
         }
+        System.out.println("Token: " + getTokenString() + ", Symbol: " + getSymbolText());
     }
 
     public static void main(String[] args)
