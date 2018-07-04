@@ -54,6 +54,9 @@ public class Input
     /** Line number of the string currently parsed. */
     private int lineNumber;
 
+    /** Actually, I don't know the usage of this variable. */
+    private int mLineNumber;
+
     private boolean reachEof;
 
     private InputHandler inputHandler;
@@ -68,6 +71,7 @@ public class Input
         previousLexLineNumber = 0;
         previousLexLength = 0;
         lineNumber = 1;
+        mLineNumber = 1;
         reachEof = false;
         inputHandler = null;
     }
@@ -108,7 +112,7 @@ public class Input
         currentLexEndIndex = END;
         bufferEnd = END;
         lineNumber = 1;
-
+        mLineNumber = 1;
     }
 
     public String getCurrentLex()
@@ -131,6 +135,39 @@ public class Input
     {
         byte[] previousLexBytes = Arrays.copyOfRange(InputBuffer, previousLexStartIndex, previousLexStartIndex + previousLexLength);
         return new String(previousLexBytes, StandardCharsets.UTF_8);
+    }
+
+    public int markStart()
+    {
+        mLineNumber = lineNumber;
+        currentLexStartIndex = nextIndex;
+        currentLexEndIndex = nextIndex;
+        return currentLexStartIndex;
+    }
+
+    public int markEnd()
+    {
+        mLineNumber = lineNumber;
+        currentLexEndIndex = nextIndex;
+        return currentLexEndIndex;
+    }
+
+    public int moveStart()
+    {
+        if (currentLexStartIndex >= currentLexEndIndex)
+            return -1;
+        else
+        {
+            currentLexStartIndex++;
+            return currentLexStartIndex;
+        }
+    }
+
+    public int toMark()
+    {
+        lineNumber = mLineNumber;
+        nextIndex = currentLexEndIndex;
+        return nextIndex;
     }
 
     public int getPreviousLexLength()
@@ -194,16 +231,55 @@ public class Input
 
         if ((nextIndex >= DANGER) || force)
         {
-            int leftEdge = previousLexStartIndex < currentLexStartIndex ? previousLexStartIndex : currentLexStartIndex;
-            int shiftAmount = leftEdge;
+            int shiftAmount = previousLexStartIndex < currentLexStartIndex ? previousLexStartIndex : currentLexStartIndex;
 
             if (shiftAmount < MAX_LEX)
             {
                 if (!force)
                     return FLUSH_FAILURE;
+
+                moveNext();
+                shiftAmount = markStart();
             }
+
+            int copyAmount = bufferEnd - shiftAmount;
+            System.arraycopy(InputBuffer, 0, InputBuffer, shiftAmount, copyAmount);
+
+            if (fillBuffer(copyAmount) == 0)
+                System.err.println("Internal error (flush): Input buffer is full, cannot read.");
+
+            if (previousLexStartIndex != 0)
+                previousLexStartIndex -= shiftAmount;
+
+            currentLexStartIndex -= shiftAmount;
+            currentLexEndIndex -= shiftAmount;
+            nextIndex -= shiftAmount;
         }
 
-        return 0;
+        return FLUSH_SUCCESS;
+    }
+
+    /**
+     * Reads contents from input stream and fills input buffer.
+     * @return the length of the contents actually read.
+     * */
+    private int fillBuffer(int startIndex)
+    {
+        int need = ((END - startIndex) / MAX_LEX) * MAX_LEX;
+        if (need < 0)
+            System.err.println("Internal error (fillBuffer): Bad read-request start index.");
+
+        if (need == 0)
+            return 0;
+
+        int addedLength = inputHandler.read(InputBuffer, startIndex, need);
+        if (addedLength == -1)
+            System.err.println("Cannot read input contents.");
+
+        bufferEnd = startIndex + addedLength;
+        if (addedLength < need)
+            reachEof = true;
+
+        return addedLength;
     }
 }
