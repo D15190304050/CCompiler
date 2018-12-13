@@ -11,7 +11,7 @@ public class InputSystemTest
     private static void runTest()
     {
         Input input = new Input();
-        input.newStandardInput();
+//        input.newStandardInput();
 
         input.markStart();
 

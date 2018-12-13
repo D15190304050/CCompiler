@@ -1,67 +1,98 @@
 package expression;
 
+import java.io.*;
+
+/**
+ * The {@link BasicParser} class represents a simple parser that supports expressions containing only numbers, operators
+ * such as "+", "*" and parentheses and ending with ";".
+ * @implNote This is a implementation which complies with the syntax production strictly.
+ * */
 public class BasicParser
 {
+    /** The lexer to tokenize text in the input stream. */
     private Lexer lexer;
-    private boolean isLegalExpression;
 
+    /** A boolean value indicating whether the statements is legal. */
+    private boolean isLegalStatement;
+
+    /**
+     * Initializes a new instance of {@link BasicParser} with the specified {@link Lexer}.
+     * @param lexer The specified {@link Lexer}.
+     * */
     public BasicParser(Lexer lexer)
     {
-        isLegalExpression = true;
+        isLegalStatement = true;
         this.lexer = lexer;
     }
 
     /**
+     * Parses a "statements" with following production.
+     * <p>
      * statements -> expression ; | expression ; statements
+     * <p/>
      * */
-    public void statement()
+    @SuppressWarnings("Duplicates")
+    public void statements()
     {
         expression();
 
-        // Read next token.
-        // If the next token following semicolon is not EOI, then use the parse rule on the right.
-        if (lexer.match(Lexer.SEMICOLON))
-            lexer.getNextToken();
+        // If the next token following semicolon is not END_OF_FILE, then use the parse rule on the right.
+        // Else if the expression contains unknown symbol or unsupported operator, then it is an illegal statements.
+        // Else => the expression doesn't end with a semicolon, it is an illegal statements.
+        if (lexer.match(TokenType.SEMICOLON))
+        {
+            lexer.lookNextToken();
+            System.out.println("The statement is " + (isLegalStatement ? "legal" : "illegal"));
+            isLegalStatement = true;
+        }
+        else if (lexer.match(TokenType.UNKNOWN_SYMBOL) ||
+                lexer.match(TokenType.MINUS) ||
+                lexer.match(TokenType.DIVIDE))
+        {
+            System.out.println("Error: unknown symbol: " + lexer.getSymbolText() + " at line: " + lexer.getLineNumber() + ".");
+            lexer.clearLine();
+        }
         else
         {
-            // If the expression doesn't end with a semicolon, then it is a legal statement.
-
-            isLegalExpression = false;
-            System.out.println("Line " + lexer.getLineNumber() + ": missing semicolon.");
-            return;
+            isLegalStatement = false;
+            System.out.println("Line " + lexer.getLineNumber() + ": missing \";\".");
+            lexer.clearLine();
         }
 
-        // If there are still contents un-parsed, continue to parse.
-        if (!lexer.match(Lexer.EOI))
-            statement();
-
-        if (isLegalExpression)
-            System.out.println("The statement is legal");
+        // If there are still contents un-parsed in the input stream, continue to parse.
+        if (!lexer.match(TokenType.END_OF_FILE))
+            statements();
     }
 
     /**
+     * Parses an "expression" with following production.
+     * <p>
      * expression -> term addExpression
+     * <p/>
      * */
-    public void expression()
+    private void expression()
     {
         term();
         addExpression();
     }
 
     /**
-     * addExpression -> PLUS term addExpression | Empty
+     * Parses an "addExpression" with following production.
+     * <p>
+     * addExpression -> + term addExpression | Empty
+     * <p/>
      * */
     private void addExpression()
     {
-        if (lexer.match(Lexer.PLUS))
+        if (lexer.match(TokenType.PLUS))
         {
-            lexer.getNextToken();
+            lexer.lookNextToken();
             term();
             addExpression();
         }
-        else if (lexer.match(Lexer.UNKNOWN_SYMBOL))
+        else if (lexer.match(TokenType.UNKNOWN_SYMBOL))
         {
-            isLegalExpression = false;
+            isLegalStatement = false;
             System.out.println("Line " + lexer.getLineNumber() + ": unknown symbol: " + lexer.getSymbolText());
             return;
         }
@@ -73,61 +104,77 @@ public class BasicParser
     }
 
     /**
-     * term -> factor termPrime
+     * Parses a "term" with following production.
+     * <p>
+     * term -> factor subMultiplicationTerm
+     * <p/>
      * */
     private void term()
     {
         factor();
-        termPrime();
+        subMultiplicationTerm();
     }
 
     /**
-     * termPrime -> * factor termPrime | Empty
+     * Parses a "subMultiplicationTerm" with following production.
+     * <p>
+     * subMultiplicationTerm -> * factor subMultiplicationTerm | Empty
+     * <p/>
      * */
-    private void termPrime()
+    private void subMultiplicationTerm()
     {
-        if (lexer.match(Lexer.TIMES))
+        if (lexer.match(TokenType.TIMES))
         {
-            lexer.getNextToken();
+            lexer.lookNextToken();
             factor();
-            termPrime();
+            subMultiplicationTerm();
         }
         else
             return;
     }
 
     /**
-     * factor -> NUMBER_OR_IDENTIFIER | LEFT_PARENTHESES Expression RIGHT_PARENTHESES
+     * Parses a "factor" with following production.
+     * <p>
+     * factor -> NUMBER_OR_ID | ( expression )
+     * <p/>
      * */
     private void factor()
     {
-        if (lexer.match(Lexer.NUMBER_OR_IDENTIFIER))
-            lexer.getNextToken();
-        else if (lexer.match(Lexer.LEFT_PARENTHESES))
+        if (lexer.match(TokenType.NUMBER_OR_IDENTIFIER))
+            lexer.lookNextToken();
+        else if (lexer.match(TokenType.LEFT_PARENTHESES))
         {
-            lexer.getNextToken();
+            lexer.lookNextToken();
             expression();
-            if (lexer.match(Lexer.RIGHT_PARENTHESES))
-                lexer.getNextToken();
+            if (lexer.match(TokenType.RIGHT_PARENTHESES))
+                lexer.lookNextToken();
             else
             {
-                isLegalExpression = false;
-                System.out.println("Line " + lexer.getLineNumber() + ": missing )");
+                isLegalStatement = false;
+                System.out.println("Line " + lexer.getLineNumber() + ": missing \")\"");
                 return;
             }
         }
         else
         {
-            isLegalExpression = false;
+            isLegalStatement = false;
             System.out.println("Line " + lexer.getLineNumber() + ": unexpected symbol \"" + lexer.getSymbolText() + "\"");
             return;
         }
     }
 
-    public static void main(String[] args)
+    /**
+     * A unit test method for the {@link BasicParser} class.
+     * */
+    public static void main(String[] args) throws IOException
     {
-        Lexer lexer = new Lexer();
-        BasicParser basicParser = new BasicParser(lexer);
-        basicParser.statement();
+        String sourceFilePath = "./out/production/CCompiler/expression/parserTest.txt";
+        FileInputStream sourceFile = new FileInputStream(sourceFilePath);
+        Lexer lexer = new Lexer(sourceFile);
+        BasicParser parser = new BasicParser(lexer);
+        parser.statements();
+        lexer.close();
+        sourceFile.close();
     }
 }
