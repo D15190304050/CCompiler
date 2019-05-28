@@ -1,9 +1,9 @@
 package InputSystem;
 
 /**
- * The {@link InputHandler} interface provides a set of methods to retrieve contents from standard input stream or a file.
+ * The {@link ICodeInput} interface provides a set of methods to retrieve contents from standard input stream or a file.
  * */
-public interface InputHandler
+public interface ICodeInput
 {
     void open();
     void close();

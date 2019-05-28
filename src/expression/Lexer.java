@@ -25,7 +25,7 @@ public class Lexer
     /** Remaining contents in this line to analyze. */
     private String remainingContents;
 
-    /** Input of this {@link Lexer}. */
+    /** CodeReader of this {@link Lexer}. */
     private Scanner input;
 
     /**

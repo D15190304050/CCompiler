@@ -1,11 +1,9 @@
 package InputSystem;
 
-public class DiskFileHandler implements InputHandler
+public class StdinCodeInput implements ICodeInput
 {
-    public DiskFileHandler(String fileName)
-    {
-
-    }
+    public StdinCodeInput()
+    {}
 
     @Override
     public void open()

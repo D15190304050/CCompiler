@@ -1,9 +1,16 @@
 package InputSystem;
 
-public class StandardInputHandler implements InputHandler
+import java.io.*;
+
+public class FileCodeInput implements ICodeInput
 {
-    public StandardInputHandler()
-    {}
+    private String inputBuffer;
+    private int currentPosition;
+
+    public FileCodeInput()
+    {
+        currentPosition = 0;
+    }
 
     @Override
     public void open()
